@@ -1,102 +1,95 @@
-"""A setuptools based setup module.
+import os
+import re
+import sys
+import subprocess
 
-See:
-https://packaging.python.org/en/latest/distributing.html
-https://github.com/pypa/sampleproject
-"""
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
+from distutils.version import LooseVersion
 
-# Always prefer setuptools over distutils
-from setuptools import setup, find_packages
-from os import path
+VERSIONFILE="pyNNGP/_version.py"
+verstrline = open(VERSIONFILE, "rt").read()
+VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+mo = re.search(VSRE, verstrline, re.M)
+if mo:
+    version = mo.group(1)
+else:
+    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
 
-here = path.abspath(path.dirname(__file__))
+class CMakeExtension(Extension):
+    def __init__(self, name, sourcedir=''):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
 
-# Get the long description from the relevant file
-# with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
-#     long_description = f.read()
+
+class CMakeBuild(build_ext):
+    def run(self):
+        try:
+            out = subprocess.check_output(['cmake', '--version'])
+        except OSError:
+            raise RuntimeError("CMake must be installed to build the following extensions: " +
+                               ", ".join(e.name for e in self.extensions))
+
+        for ext in self.extensions:
+            self.build_extension(ext)
+
+    def build_extension(self, ext):
+        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
+                      '-DPYTHON_EXECUTABLE=' + sys.executable]
+
+        cfg = 'Debug' if self.debug else 'Release'
+        build_args = ['--config', cfg]
+
+        cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
+        build_args += ['--', '-j4']
+
+        env = os.environ.copy()
+        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
+                                                              self.distribution.get_version())
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+        if 'CMAKE_VERBOSE_MAKEFILE' in env:
+            cmake_args += ['-DCMAKE_VERBOSE_MAKEFILE=1']
+        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
+        subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
+
+with open("README.md", 'r') as fh:
+    long_description = fh.read()
 
 setup(
     name='pyNNGP',
-
-    # Versions should comply with PEP440.  For a discussion on single-sourcing
-    # the version across setup.py and the project code, see
-    # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.0.dev1',
-
-    description='pyNNGP.py',
-    # long_description=long_description,
-
-    # The project's main homepage.
-    url='https://github.com/jmeyers314/pyNNGP',
-
-    # Author details
-    author='Joshua E. Meyers',
+    version=version,
+    author='Josh Meyers',
     author_email='jmeyers314@gmail.com',
-
-    # Choose your license
     license='BSD',
-
-    # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    url='https://github.com/jmeyers314/pyNNGP',
+    description="Nearest Neighbor Gaussian Process",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    packages=['pyNNGP'],
+    package_dir={'pyNNGP': 'pyNNGP'},
+    package_data={'pyNNGP' : ['data/**/*']},
+    ext_modules=[CMakeExtension('pyNNGP._pyNNGP')],
+    install_requires=['numpy', 'pyyaml'],
+    python_requires='>=3.4',
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
+    cmdclass=dict(build_ext=CMakeBuild),
+    zip_safe=False,
+    include_package_data=True,
     classifiers=[
-        # How mature is this project? Common values are
-        #   3 - Alpha
-        #   4 - Beta
-        #   5 - Production/Stable
         'Development Status :: 2 - Pre-Alpha',
-
-        # Indicate who your project is intended for
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Mathematics',
-
-        # Pick your license as you wish (should match "license" above)
         'License :: OSI Approved :: BSD License',
-
-        # Specify the Python versions you support here. In particular, ensure
-        # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 2.7, Python :: 3.5'
+        'Programming Language :: Python :: 3.4'
+        'Programming Language :: Python :: 3.5'
+        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.7'
     ],
-
-    # What does your project relate to?
-    keywords='fit bayesian statistics',
-
-    # You can just specify the packages manually here if your project is
-    # simple. Or you can use find_packages().
-    packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
-
-    # List run-time dependencies here.  These will be installed by pip when
-    # your project is installed. For an analysis of "install_requires" vs pip's
-    # requirements files see:
-    # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy', 'sklearn'],
-
-    # List additional groups of dependencies here (e.g. development
-    # dependencies). You can install these using the following syntax,
-    # for example:
-    # $ pip install -e .[dev,test]
-    # extras_require={
-    #     'dev': ['check-manifest'],
-    #     'test': ['coverage'],
-    # },
-
-    # If there are data files included in your packages that need to be
-    # installed, specify them here.  If using Python 2.6 or less, then these
-    # have to be included in MANIFEST.in as well.
-    # package_data={
-    #     'sample': ['package_data.dat'],
-    # },
-
-    # Although 'package_data' is the preferred approach, in some case you may
-    # need to place data files outside of your packages. See:
-    # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files # noqa
-    # In this case, 'data_file' will be installed into '<sys.prefix>/my_data'
-    # data_files=[('my_data', ['data/data_file'])],
-
-    # To provide executable scripts, use entry points in preference to the
-    # "scripts" keyword. Entry points provide cross-platform support and allow
-    # pip to create the appropriate form of executable for the target platform.
-    # entry_points={
-    #     'console_scripts': [
-    #         'sample=sample:main',
-    #     ],
-    # },
+    project_urls={
+        'Source': "https://github.com/jmeyers314/pyNNGP",
+        'Tracker': "https://github.com/jmeyers314/pyNNGP/issues"
+    }
 )

@@ -36,7 +36,7 @@ namespace pyNNGP {
 
         const CovModel& _cm;
 
-        const double _tausqr;  // Measurement uncertainty
+        double _tausqr;  // Measurement uncertainty
 
         std::random_device _rd;
         std::mt19937 _gen;
@@ -50,6 +50,8 @@ namespace pyNNGP {
         std::vector<double> _D;      // [j?]
         VectorXd _w;                 // [n] Latent GP samples?
         VectorXd _beta;              // [p] Unknown linear model coefficients
+        double _tauSqIGa;
+        double _tauSqIGb;
 
         void mkUIndx();
         void mkUIIndx();

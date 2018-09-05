@@ -77,11 +77,14 @@ namespace pyNNGP {
             _beta = VectorXd(2);
             _beta << 2.346582, 1.888253;
 
+            _tauSqIGa = 2.0;
+            _tauSqIGb = 1.0;
+
             int nSamples=1;
             for(int s=0; s<nSamples; s++){
                 updateW();
                 updateBeta();
-                // updateTauSqr();
+                updateTauSqr();
                 // updateSigmaSqr();
                 // updateTheta();
             }
@@ -215,11 +218,11 @@ namespace pyNNGP {
             _w[i] = norm(_gen);
         }
         // For debugging
-        _w[0] =   1.508921;
-        _w[1] =   0.250724;
-        _w[2] =   2.137284;
-        _w[3] =  -1.005202;
-        _w[4] =  -2.574499;
+        // _w[0] =   1.508921;
+        // _w[1] =   0.250724;
+        // _w[2] =   2.137284;
+        // _w[3] =  -1.005202;
+        // _w[4] =  -2.574499;
     }
 
     void SeqNNGP::updateBeta() {
@@ -233,13 +236,12 @@ namespace pyNNGP {
 
         // For debugging
         // _beta << 2.114505, 2.841327;
-        std::cout << "_beta = \n" << _beta << '\n';
+        // std::cout << "_beta = \n" << _beta << '\n';
     }
 
-    // void SeqNNGP::updateTauSqr() {
-    //     for(i = 0; i < n; i++){
-    //       tmp_n[i] = y[i] - w[i] - F77_NAME(ddot)(&p, &X[i], &n, beta, &inc);
-    //     }
-    //     theta[tauSqIndx] = 1.0/rgamma(tauSqIGa+n/2.0, 1.0/(tauSqIGb+0.5*F77_NAME(ddot)(&n, tmp_n, &inc, tmp_n, &inc)));
-    // }
+    void SeqNNGP::updateTauSqr() {
+        VectorXd tmp_n = _y - _w - _X*_beta;
+        std::gamma_distribution<> gamma{_tauSqIGa+_n/2.0, _tauSqIGb+0.5*tmp_n.squaredNorm()};
+        _tausqr = 1.0/gamma(_gen);
+    }
 }

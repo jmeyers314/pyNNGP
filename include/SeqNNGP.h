@@ -4,6 +4,9 @@
 #include "covModel.h"
 #include <vector>
 #include <random>
+#include <Eigen/Dense>
+
+using Eigen::MatrixXd;
 
 namespace pyNNGP {
     class SeqNNGP {
@@ -25,6 +28,7 @@ namespace pyNNGP {
         void mkCD();
         void updateBF();
         void updateW();
+        void updateBeta();
 
         const double* _y;  // responses [n]
         const double* _X;  // predictors [n, p]
@@ -35,6 +39,9 @@ namespace pyNNGP {
         const int _m;  // Number of nearest neighbors
         const int _nIndx;  // Total number of neighbors (DAG edges)
         const double _tausqr;  // Measurement uncertainty
+
+        const Eigen::Map<const MatrixXd> _eigenX;
+        const MatrixXd _XtX;
 
         std::vector<double> _B;
         std::vector<double> _F;

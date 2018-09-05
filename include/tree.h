@@ -17,10 +17,6 @@ namespace pyNNGP {
 
     void mkNNIndxTree0(const int n, const int m, const double *coords,
                        int *nnIndx, double *nnDist, int *nnIndxLU);
-
-    double dist2(double a1, double b1, double a2, double b2);
-    int which(int a, int *b, int n);
-
 }
 
 #endif

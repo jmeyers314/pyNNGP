@@ -1,4 +1,5 @@
 #include "tree.h"
+#include "utils.h"
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -10,38 +11,6 @@
 #endif
 
 namespace pyNNGP {
-
-    double dist2(double a1, double a2, double b1, double b2) {
-        return std::sqrt((a1-b1)*(a1-b1) + (a2-b2)*(a2-b2));
-    }
-
-    void apply_permutation(double* v, int* index, std::vector<int>& p, int N) {
-        // apply permutation p to both v and index.
-        using std::swap;  // permit ADL
-        for (int i = 0; i < N; i++) {
-            int current = i;
-            while (i != p[current]) {
-                int next = p[current];
-                swap(v[current], v[next]);
-                swap(index[current], index[next]);
-                p[current] = current;
-                current = next;
-            }
-            p[current] = current;
-        }
-    }
-
-    void rsort_with_index(double* x, int* index, int N) {
-        // sorts on x, applies same permutation to index
-        std::vector<int> p(N, 0);
-        std::iota(p.begin(), p.end(), 0);
-        std::sort(p.begin(), p.end(),
-            [&](int a, int b)
-            {return x[a] < x[b];}
-        );
-        apply_permutation(x, index, p, N);
-    }
-
     void getNNIndx(int i, int m, int& iNNIndx, int& iNN) {
         // return index into nnIndx array, nnDist array, ...
         // iNN is # of neighbors of i
@@ -58,17 +27,6 @@ namespace pyNNGP {
             iNN = m;
             return;
         }
-    }
-
-    //which index of b equals a, where b is of length n
-    int which(int a, int *b, int n){
-        int i;
-        for(int i=0; i<n; i++){
-            if(a == b[i])
-                return(i);
-        }
-        std::runtime_error("c++ error: which failed");
-        return -9999;
     }
 
     Node::Node(int i) : index(i), left(nullptr), right(nullptr) {}
@@ -91,8 +49,8 @@ namespace pyNNGP {
 
         if(!Tree) return;
 
-        double disttemp= dist2(coords[2*index],coords[2*index+1],
-                               coords[2*Tree->index],coords[2*Tree->index+1]);
+        double disttemp = dist2(coords[2*index], coords[2*index+1],
+                                coords[2*Tree->index], coords[2*Tree->index+1]);
 
         if(index!=Tree->index && disttemp<nnDist[iNNIndx+iNN-1]) {
             nnDist[iNNIndx+iNN-1]=disttemp;

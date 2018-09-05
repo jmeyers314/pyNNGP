@@ -19,6 +19,7 @@ set(PYSRC_FILES
 set(SRC_FILES
   src/SeqNNGP.cpp
   src/tree.cpp
+  src/utils.cpp
 )
 set(CMAKE_POSITION_INDEPENDENT_CODE True)
 # find_package(OpenMP REQUIRED)

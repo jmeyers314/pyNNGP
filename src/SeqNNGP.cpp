@@ -1,8 +1,9 @@
-#include <chrono>
 #include "SeqNNGP.h"
 #include "tree.h"
+#include "utils.h"
+
+#include <chrono>
 #include <iostream>
-#include <Eigen/Dense>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -17,8 +18,9 @@ namespace pyNNGP {
         _y(y), _X(X), _coords(coords),
         _p(p), _n(n), _m(nNeighbors),
         _nIndx(_m*(_m+1)/2+(_n-_m-1)*_m),
-        _tausqr(tausqr), _cm(cm),
-        _gen(_rd())
+        _tausqr(tausqr),
+        _eigenX(_X, _n, _p), _XtX(_eigenX.transpose()*_eigenX),
+        _cm(cm), _gen(_rd())
         {
             // build the neighbor index
             nnIndx.resize(_nIndx);
@@ -53,15 +55,6 @@ namespace pyNNGP {
             diff = end-start;
             std::cout << "duration = " << diff.count() << "s" << '\n';
 
-            // Attempting to generate Xt . X
-            std::cout << "Generating XtX" << '\n';
-            start = std::chrono::high_resolution_clock::now();
-            const Eigen::Map<const MatrixXd> eigenX(_X, _n, _p);
-            MatrixXd XtX{eigenX.transpose()*eigenX};
-            end = std::chrono::high_resolution_clock::now();
-            diff = end-start;
-            std::cout << "duration = " << diff.count() << "s" << '\n';
-
             // ExponentialCovModel covModel{5.0, 6.0};
             std::cout << "updating BF" << '\n';
             start = std::chrono::high_resolution_clock::now();
@@ -88,6 +81,10 @@ namespace pyNNGP {
             int nSamples=1;
             for(int s=0; s<nSamples; s++){
                 updateW();
+                updateBeta();
+                // updateTauSqr();
+                // updateSigmaSqr();
+                // updateTheta();
             }
         }
 
@@ -226,4 +223,22 @@ namespace pyNNGP {
         }
     }
 
+    void SeqNNGP::updateBeta() {
+        VectorXd tmp_n(_n);
+        for(int i=0; i<_n; i++) {
+            tmp_n[i] = (_y[i] - _w[i])/_tausqr;
+        }
+        VectorXd tmp_p{_eigenX*tmp_n};
+
+        MatrixXd tmp_pp(_p, _p);
+        tmp_pp = _XtX/_tausqr;
+
+        auto tmp_p2 = tmp_pp.llt().solve(tmp_p);
+
+        // F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info); if(info != 0){error("c++ error: dpotrf failed\n");}
+        // F77_NAME(dpotri)(lower, &p, tmp_pp, &p, &info); if(info != 0){error("c++ error: dpotri failed\n");}
+        // F77_NAME(dsymv)(lower, &p, &one, tmp_pp, &p, tmp_p, &inc, &zero, tmp_p2, &inc);
+        // F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info); if(info != 0){error("c++ error: dpotrf failed\n");}
+        // mvrnorm(beta, tmp_p2, tmp_pp, p);
+    }
 }

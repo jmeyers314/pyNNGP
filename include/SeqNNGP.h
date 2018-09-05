@@ -29,6 +29,7 @@ namespace pyNNGP {
         void updateBF();
         void updateW();
         void updateBeta();
+        void updateTauSqr();
 
         const double* _y;  // responses [n]
         const double* _X;  // predictors [n, p]
@@ -51,7 +52,7 @@ namespace pyNNGP {
         std::vector<double> _C;
         std::vector<double> _D;
         std::vector<double> _w; // Latent GP samples?
-        std::vector<double> _beta; // Unknown linear model coefficients
+        Eigen::VectorXd _beta; // Unknown linear model coefficients
 
         std::random_device _rd;
         std::mt19937 _gen;

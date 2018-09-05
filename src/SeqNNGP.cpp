@@ -74,9 +74,9 @@ namespace pyNNGP {
             // }
             // std::cout << "\n\n\n" << '\n';
 
-            _beta.resize(_p);
-            _beta[0] = 2.346582;
-            _beta[1] = 1.888253;
+            // For now...
+            _beta = VectorXd(2);
+            _beta << 2.346582, 1.888253;
 
             int nSamples=1;
             for(int s=0; s<nSamples; s++){
@@ -221,6 +221,12 @@ namespace pyNNGP {
             std::normal_distribution<> norm{mu*var, std::sqrt(var)};
             _w[i] = norm(_gen);
         }
+        // For debugging
+        _w[0] =   1.508921;
+        _w[1] =   0.250724;
+        _w[2] =   2.137284;
+        _w[3] =  -1.005202;
+        _w[4] =  -2.574499;
     }
 
     void SeqNNGP::updateBeta() {
@@ -228,17 +234,25 @@ namespace pyNNGP {
         for(int i=0; i<_n; i++) {
             tmp_n[i] = (_y[i] - _w[i])/_tausqr;
         }
-        VectorXd tmp_p{_eigenX*tmp_n};
+        VectorXd tmp_p{_eigenX.transpose()*tmp_n};
 
         MatrixXd tmp_pp(_p, _p);
         tmp_pp = _XtX/_tausqr;
 
-        auto tmp_p2 = tmp_pp.llt().solve(tmp_p);
+        // May be more efficient ways to do this...
+        VectorXd mean = tmp_pp.llt().solve(tmp_p);
+        MatrixXd cov = tmp_pp.inverse();
+        _beta = MVNorm(mean, cov)(_gen);
 
-        // F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info); if(info != 0){error("c++ error: dpotrf failed\n");}
-        // F77_NAME(dpotri)(lower, &p, tmp_pp, &p, &info); if(info != 0){error("c++ error: dpotri failed\n");}
-        // F77_NAME(dsymv)(lower, &p, &one, tmp_pp, &p, tmp_p, &inc, &zero, tmp_p2, &inc);
-        // F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info); if(info != 0){error("c++ error: dpotrf failed\n");}
-        // mvrnorm(beta, tmp_p2, tmp_pp, p);
+        // For debugging
+        _beta << 2.114505, 2.841327;
+        std::cout << "_beta = \n" << _beta << '\n';
     }
+
+    // void SeqNNGP::updateTauSqr() {
+    //     for(i = 0; i < n; i++){
+    //       tmp_n[i] = y[i] - w[i] - F77_NAME(ddot)(&p, &X[i], &n, beta, &inc);
+    //     }
+    //     theta[tauSqIndx] = 1.0/rgamma(tauSqIGa+n/2.0, 1.0/(tauSqIGb+0.5*F77_NAME(ddot)(&n, tmp_n, &inc, tmp_n, &inc)));
+    // }
 }

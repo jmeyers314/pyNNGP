@@ -7,6 +7,7 @@
 #include <Eigen/Dense>
 
 using Eigen::MatrixXd;
+using Eigen::VectorXd;
 
 namespace pyNNGP {
     class SeqNNGP {
@@ -14,15 +15,42 @@ namespace pyNNGP {
         SeqNNGP(const double* y, const double* X, const double* coords,
                 int p, int n, int nNeighbors, const CovModel& cm, const double tausqr);
 
-        std::vector<int> nnIndx;
-        std::vector<int> nnIndxLU;
-        std::vector<double> nnDist;
-        std::vector<int> uIndx;
-        std::vector<int> uIndxLU;
-        std::vector<int> uiIndx;
-        std::vector<int> CIndx;
+        std::vector<int> nnIndx;    // [nIndx]
+        std::vector<int> nnIndxLU;  // [2*n]
+        std::vector<double> nnDist; // [nIndx]
+        std::vector<int> uIndx;     // [nIndx]
+        std::vector<int> uIndxLU;   // [2*n]
+        std::vector<int> uiIndx;    // [nIndx]
+        std::vector<int> CIndx;     // [2*n]
 
     private:
+        const int _p;  // Number of indicators per input location
+        const int _n;  // Number of input locations
+        const int _m;  // Number of nearest neighbors
+        const int _nIndx;  // Total number of neighbors (DAG edges)
+
+        const Eigen::Map<const VectorXd> _y;       // [n]
+        const Eigen::Map<const MatrixXd> _X;       // [n, p]
+        const Eigen::Map<const MatrixXd> _coords;  // [n, 2]
+        const MatrixXd _XtX;
+
+        const CovModel& _cm;
+
+        const double _tausqr;  // Measurement uncertainty
+
+        std::random_device _rd;
+        std::mt19937 _gen;
+
+        std::vector<double> _B;      // [nIndx]
+        std::vector<double> _F;      // [n]
+        std::vector<double> _BCand;  // [nIndx]
+        std::vector<double> _FCand;  // [n]
+        std::vector<double> _c;      // [nIndx]
+        std::vector<double> _C;      // [j?]
+        std::vector<double> _D;      // [j?]
+        VectorXd _w;                 // [n] Latent GP samples?
+        VectorXd _beta;              // [p] Unknown linear model coefficients
+
         void mkUIndx();
         void mkUIIndx();
         void mkCD();
@@ -30,34 +58,6 @@ namespace pyNNGP {
         void updateW();
         void updateBeta();
         void updateTauSqr();
-
-        const double* _y;  // responses [n]
-        const double* _X;  // predictors [n, p]
-        const double* _coords; // [n, 2]
-
-        const int _p;  // Number of indicators per input location
-        const int _n;  // Number of input locations
-        const int _m;  // Number of nearest neighbors
-        const int _nIndx;  // Total number of neighbors (DAG edges)
-        const double _tausqr;  // Measurement uncertainty
-
-        const Eigen::Map<const MatrixXd> _eigenX;
-        const MatrixXd _XtX;
-
-        std::vector<double> _B;
-        std::vector<double> _F;
-        std::vector<double> _BCand;
-        std::vector<double> _FCand;
-        std::vector<double> _c;
-        std::vector<double> _C;
-        std::vector<double> _D;
-        std::vector<double> _w; // Latent GP samples?
-        Eigen::VectorXd _beta; // Unknown linear model coefficients
-
-        std::random_device _rd;
-        std::mt19937 _gen;
-
-        const CovModel& _cm;
     };
 }
 

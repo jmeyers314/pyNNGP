@@ -15,12 +15,11 @@ using Eigen::VectorXd;
 namespace pyNNGP {
     SeqNNGP::SeqNNGP(const double* y, const double* X, const double* coords,
         int p, int n, int nNeighbors, const CovModel& cm, const double tausqr) :
-        _y(y), _X(X), _coords(coords),
-        _p(p), _n(n), _m(nNeighbors),
-        _nIndx(_m*(_m+1)/2+(_n-_m-1)*_m),
-        _tausqr(tausqr),
-        _eigenX(_X, _n, _p), _XtX(_eigenX.transpose()*_eigenX),
-        _cm(cm), _gen(_rd())
+        _p(p), _n(n), _m(nNeighbors), _nIndx(_m*(_m+1)/2+(_n-_m-1)*_m),
+        _y(y, _n), _X(X, _n, _p), _coords(coords, _n, _p),
+        _XtX(_X.transpose()*_X),
+        _cm(cm), _tausqr(tausqr),
+        _gen(_rd())
         {
             // build the neighbor index
             nnIndx.resize(_nIndx);
@@ -30,7 +29,7 @@ namespace pyNNGP {
 
             std::cout << "Finding neighbors" << '\n';
             auto start = std::chrono::high_resolution_clock::now();
-            mkNNIndxTree0(_n, _m, _coords, &nnIndx[0], &nnDist[0], &nnIndxLU[0]);
+            mkNNIndxTree0(_n, _m, _coords.data(), &nnIndx[0], &nnDist[0], &nnIndxLU[0]);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> diff = end-start;
             std::cout << "duration = " << diff.count() << "s" << '\n';
@@ -144,9 +143,7 @@ namespace pyNNGP {
                 for(int ell=0; ell<=k; ell++) {
                     int i1 = nnIndx[nnIndxLU[i]+k];
                     int i2 = nnIndx[nnIndxLU[i]+ell];
-                    _D[CIndx[i]+ell*nnIndxLU[_n+i]+k] =
-                        dist2(_coords[2*i1], _coords[2*i1+1],
-                              _coords[2*i2], _coords[2*i2+1]);
+                    _D[CIndx[i]+ell*nnIndxLU[_n+i]+k] = dist2(_coords.row(i1), _coords.row(i2));
                 }
             }
         }
@@ -211,11 +208,7 @@ namespace pyNNGP {
             for(int j=0; j<nnIndxLU[_n+i]; j++){
                 e += _B[nnIndxLU[i]+j] * _w[nnIndx[nnIndxLU[i]+j]];
             }
-            using Eigen::InnerStride;
-            Eigen::Map<const VectorXd, Eigen::Unaligned, InnerStride<>> eigenX(&_X[i], _p, Eigen::InnerStride<>(_n));
-            Eigen::Map<const VectorXd> eigenBeta(&_beta[0], _p);
-
-            double mu = _y[i] - eigenX.dot(eigenBeta)/_tausqr + e/_F[i] + a;
+            double mu = _y[i] - _X.row(i).dot(_beta)/_tausqr + e/_F[i] + a;
             double var = 1.0/(1.0/_tausqr + 1.0/_F[i] + v);
 
             std::normal_distribution<> norm{mu*var, std::sqrt(var)};
@@ -230,14 +223,8 @@ namespace pyNNGP {
     }
 
     void SeqNNGP::updateBeta() {
-        VectorXd tmp_n(_n);
-        for(int i=0; i<_n; i++) {
-            tmp_n[i] = (_y[i] - _w[i])/_tausqr;
-        }
-        VectorXd tmp_p{_eigenX.transpose()*tmp_n};
-
-        MatrixXd tmp_pp(_p, _p);
-        tmp_pp = _XtX/_tausqr;
+        VectorXd tmp_p{_X.transpose()*(_y-_w)/_tausqr};
+        MatrixXd tmp_pp{_XtX/_tausqr};
 
         // May be more efficient ways to do this...
         VectorXd mean = tmp_pp.llt().solve(tmp_p);
@@ -245,7 +232,7 @@ namespace pyNNGP {
         _beta = MVNorm(mean, cov)(_gen);
 
         // For debugging
-        _beta << 2.114505, 2.841327;
+        // _beta << 2.114505, 2.841327;
         std::cout << "_beta = \n" << _beta << '\n';
     }
 

@@ -14,7 +14,7 @@ using Eigen::VectorXd;
 
 namespace pyNNGP {
     SeqNNGP::SeqNNGP(const double* y, const double* X, const double* coords,
-        int p, int n, int nNeighbors, const CovModel& cm, const double tausqr) :
+        int p, int n, int nNeighbors, CovModel& cm, const double tausqr) :
         _p(p), _n(n), _m(nNeighbors), _nIndx(_m*(_m+1)/2+(_n-_m-1)*_m),
         _y(y, _n), _X(X, _n, _p), _coords(coords, _n, _p),
         _XtX(_X.transpose()*_X),
@@ -79,14 +79,17 @@ namespace pyNNGP {
 
             _tauSqIGa = 2.0;
             _tauSqIGb = 1.0;
+            _sigmaSqrIGa = 2.0;
+            _sigmaSqrIGb = 5.0;
+            _sigmaSqr = 1.0;
 
             int nSamples=1;
             for(int s=0; s<nSamples; s++){
                 updateW();
                 updateBeta();
                 updateTauSqr();
-                // updateSigmaSqr();
-                // updateTheta();
+                updateSigmaSqr();
+                updateTheta();
             }
         }
 
@@ -244,4 +247,107 @@ namespace pyNNGP {
         std::gamma_distribution<> gamma{_tauSqIGa+_n/2.0, _tauSqIGb+0.5*tmp_n.squaredNorm()};
         _tausqr = 1.0/gamma(_gen);
     }
+
+    void SeqNNGP::updateSigmaSqr() {
+        double a = 0.0;
+
+        #ifdef _OPENMP
+        #pragma omp parallel for private (e, j, b) reduction(+:a, logDet)
+        #endif
+        for(int i=0; i<_n; i++){
+            double b = _w[i];
+            if(nnIndxLU[_n+i] > 0){
+                double e = 0.0;
+                for(int j=0; j<nnIndxLU[_n+i]; j++){
+                    e += _B[nnIndxLU[i]+j]*_w[nnIndx[nnIndxLU[i]+j]];
+                }
+                b -= e;
+            }
+            a += b*b/_F[i];
+        }
+
+        std::gamma_distribution<> gamma{_sigmaSqrIGa+_n/2.0, _sigmaSqrIGb+0.5*a*_sigmaSqr};
+        _sigmaSqr = 1.0/gamma(_gen);
+    }
+
+    void SeqNNGP::updateTheta() {
+        // Knows about w, B, F, indexing arrays, priors, RNG, MH proposal parameters,
+        //   scratch-space for proposed B, F, theta?, other arrays?  (C, D)
+
+        updateBF();
+        double a=0.0;
+        double logDet=0.0;
+
+        #ifdef _OPENMP
+        #pragma omp parallel for private (e, j, b) reduction(+:a, logDet)
+        #endif
+        for(int i=0; i<_n; i++) {
+            double b = _w[i];
+            if(nnIndxLU[_n+i] > 0) {
+                double e=0.0;
+                for(int j=0; j<nnIndxLU[_n+i]; j++) {
+                    e += _B[nnIndxLU[i]+j]*_w[nnIndx[nnIndxLU[i]+j]];
+                }
+                b -= e;
+            }
+            a += b*b/_F[i];
+            logDet += log(_F[i]);
+        }
+
+        double logPostCurrent = -0.5*logDet - 0.5*a;
+        // logPostCurrent += std::log(theta[phiIndx] - phiUnifa) + std::log(phiUnifb - theta[phiIndx]);
+        // if(corName == "matern"){
+        //     logPostCurrent += log(theta[nuIndx] - nuUnifa) + log(nuUnifb - theta[nuIndx]);
+        // }
+
+    }
+    //
+    //     //candidate
+    //     phiCand = logitInv(rnorm(logit(theta[phiIndx], phiUnifa, phiUnifb), tuning[phiIndx]), phiUnifa, phiUnifb);
+    //     if(corName == "matern"){
+    //         nuCand = logitInv(rnorm(logit(theta[nuIndx], nuUnifa, nuUnifb), tuning[nuIndx]), nuUnifa, nuUnifb);
+    //     }
+    //
+    //     updateBF(BCand, FCand, c, C, D, d, nnIndxLU, CIndx, n, theta[sigmaSqIndx], phiCand, nuCand, covModel, bk, nuUnifb);
+    //
+    //     a = 0;
+    //     logDet = 0;
+    //
+    //     #ifdef _OPENMP
+    //     #pragma omp parallel for private (e, j, b) reduction(+:a, logDet)
+    //     #endif
+    //     for(i = 0; i < n; i++){
+    //         if(nnIndxLU[n+i] > 0){
+    //             e = 0;
+    //             for(j = 0; j < nnIndxLU[n+i]; j++){
+    //                 e += BCand[nnIndxLU[i]+j]*w[nnIndx[nnIndxLU[i]+j]];
+    //             }
+    //             b = w[i] - e;
+    //         }else{
+    //             b = w[i];
+    //         }
+    //         a += b*b/FCand[i];
+    //         logDet += log(FCand[i]);
+    //     }
+    //
+    //     logPostCand = -0.5*logDet - 0.5*a;
+    //     logPostCand += log(phiCand - phiUnifa) + log(phiUnifb - phiCand);
+    //     if(corName == "matern"){
+    //         logPostCand += log(nuCand - nuUnifa) + log(nuUnifb - nuCand);
+    //     }
+    //
+    //     if(runif(0.0,1.0) <= exp(logPostCand - logPostCurrent)){
+    //
+    //         std::swap(BCand, B);
+    //         std::swap(FCand, F);
+    //
+    //         theta[phiIndx] = phiCand;
+    //         if(corName == "matern"){
+    //             theta[nuIndx] = nuCand;
+    //         }
+    //
+    //         accept++;
+    //         batchAccept++;
+    //     }
+    // }
 }

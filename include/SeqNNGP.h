@@ -13,7 +13,7 @@ namespace pyNNGP {
     class SeqNNGP {
     public:
         SeqNNGP(const double* y, const double* X, const double* coords,
-                int p, int n, int nNeighbors, const CovModel& cm, const double tausqr);
+                int p, int n, int nNeighbors, CovModel& cm, const double tausqr);
 
         std::vector<int> nnIndx;    // [nIndx]
         std::vector<int> nnIndxLU;  // [2*n]
@@ -34,7 +34,7 @@ namespace pyNNGP {
         const Eigen::Map<const MatrixXd> _coords;  // [n, 2]
         const MatrixXd _XtX;
 
-        const CovModel& _cm;
+        CovModel& _cm;
 
         double _tausqr;  // Measurement uncertainty
 
@@ -52,6 +52,9 @@ namespace pyNNGP {
         VectorXd _beta;              // [p] Unknown linear model coefficients
         double _tauSqIGa;
         double _tauSqIGb;
+        double _sigmaSqrIGa;
+        double _sigmaSqrIGb;
+        double _sigmaSqr;
 
         void mkUIndx();
         void mkUIIndx();
@@ -60,6 +63,8 @@ namespace pyNNGP {
         void updateW();
         void updateBeta();
         void updateTauSqr();
+        void updateSigmaSqr();
+        void updateTheta();
     };
 }
 

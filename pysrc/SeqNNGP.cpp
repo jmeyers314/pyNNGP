@@ -23,6 +23,9 @@ namespace pyNNGP {
         py::class_<SeqNNGP>(m, "SeqNNGP")
             .def(py::init(&MakeSeqNNGP))
             .def("sample", &SeqNNGP::sample)
+            .def("updateW", &SeqNNGP::updateW)
+            .def("updateBeta", &SeqNNGP::updateBeta)
+            .def("updateTauSq", &SeqNNGP::updateTauSq)
             .def_property_readonly("nnIndx",
                 [](SeqNNGP& s) -> py::array_t<int> {
                     return {{s.nnIndx.size()},
@@ -78,6 +81,39 @@ namespace pyNNGP {
                     &s.CIndx[0],
                     py::cast(s)};
                 }
-            );
+            )
+            .def_property_readonly("B",
+                [](SeqNNGP& s) -> py::array_t<double> {
+                    return {{s.B.size()},
+                    {sizeof(double)},
+                    &s.B[0],
+                    py::cast(s)};
+                }
+            )
+            .def_property_readonly("F",
+                [](SeqNNGP& s) -> py::array_t<double> {
+                    return {{s.F.size()},
+                    {sizeof(double)},
+                    &s.F[0],
+                    py::cast(s)};
+                }
+            )
+            .def_property_readonly("w",
+                [](SeqNNGP& s) -> py::array_t<double> {
+                    return {{s.w.size()},
+                    {sizeof(double)},
+                    &s.w[0],
+                    py::cast(s)};
+                }
+            )
+            .def_property_readonly("beta",
+                [](SeqNNGP& s) -> py::array_t<double> {
+                    return {{s.beta.size()},
+                    {sizeof(double)},
+                    &s.beta[0],
+                    py::cast(s)};
+                }
+            )
+            .def_readonly("tauSq", &SeqNNGP::tauSq);
     }
 }

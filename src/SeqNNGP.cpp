@@ -17,10 +17,12 @@ namespace pyNNGP {
     SeqNNGP::SeqNNGP(const double* _y, const double* _X, const double* _coords,
         int _p, int _n, int _m, CovModel& _cm, const double _tauSq) :
         p(_p), n(_n), m(_m), nIndx(m*(m+1)/2+(n-m-1)*m),
-        y(_y, n), X(_X, n, p), coords(_coords, n, p),
+        y(_y, n),
+        X(_X, p, n), coords(_coords, 2, n), // Note n x m in python is m x n in Eigen (by default).
         XtX(X.transpose()*X),
         cm(_cm), tauSq(_tauSq),
-        gen(rd())
+        gen(rd()),
+        w(VectorXd::Zero(n)), beta(VectorXd::Zero(p))
         {
             // build the neighbor index
             nnIndx.resize(nIndx);
@@ -30,7 +32,7 @@ namespace pyNNGP {
 
             std::cout << "Finding neighbors" << '\n';
             auto start = std::chrono::high_resolution_clock::now();
-            mkNNIndxTree0(n, m, coords.data(), &nnIndx[0], &nnDist[0], &nnIndxLU[0]);
+            mkNNIndxTree0(n, m, coords, &nnIndx[0], &nnDist[0], &nnIndxLU[0]);
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> diff = end-start;
             std::cout << "duration = " << diff.count() << "s" << '\n';
@@ -62,9 +64,9 @@ namespace pyNNGP {
             diff = end-start;
             std::cout << "duration = " << diff.count() << "s" << '\n';
 
-            // For now...
-            beta = VectorXd(2);
-            beta << 2.346582, 1.888253;
+            // // For now...
+            // beta = VectorXd(2);
+            // beta << 2.346582, 1.888253;
 
             tauSqIGa = 2.0;
             tauSqIGb = 1.0;
@@ -137,7 +139,7 @@ namespace pyNNGP {
                 for(int ell=0; ell<=k; ell++) {
                     int i1 = nnIndx[nnIndxLU[i]+k];
                     int i2 = nnIndx[nnIndxLU[i]+ell];
-                    D[CIndx[i]+ell*nnIndxLU[n+i]+k] = dist2(coords.row(i1), coords.row(i2));
+                    D[CIndx[i]+ell*nnIndxLU[n+i]+k] = dist2(coords.col(i1), coords.col(i2));
                 }
             }
         }
@@ -154,12 +156,18 @@ namespace pyNNGP {
         #pragma omp parallel for private(k, ell)
         #endif
         for(int i=0; i<n; i++) {
+            // std::cout << "\n\ni = " << i << '\n';
             if(i>0) {
                 // Construct C and c matrices that we'll Chosolve below
                 // I think these are essentially the constituents of eq (3) of Datta++14
                 // I.e., we're updating auto- and cross-covariances
                 for(k=0; k<nnIndxLU[n+i]; k++) {
                     c[nnIndxLU[i]+k] = cm.cov(nnDist[nnIndxLU[i]+k]);
+                    // assert(nnDist[nnIndxLU[i]+k] == dist2(coords.col(i), coords.col(nnIndxLU[i]+k)));
+                    // std::cout << "nnDist[nnIndxLU[i]+k] = " << nnDist[nnIndxLU[i]+k] << '\n';
+                    // std::cout << "coords.col(i) = " << coords.col(i) << '\n';
+                    // std::cout << "coords.col(nnIndxLU[i]+k) = " << coords.col(nnIndxLU[i]+k) << '\n';
+                    // std::cout << "dist2(coords.col(i), coords.col(nnIndxLU[i]+k)) = " << dist2(coords.col(i), coords.col(nnIndxLU[i]+k)) << '\n';
                     for(ell=0; ell<=k; ell++) {
                         C[CIndx[i]+ell*nnIndxLU[n+i]+k] =
                             cm.cov(D[CIndx[i]+ell*nnIndxLU[n+i]+k]);
@@ -168,14 +176,18 @@ namespace pyNNGP {
                 // Note symmetric, so shouldn't matter if I screw up row/col major here.
                 const Eigen::Map<const MatrixXd> eigenC(&C[CIndx[i]], nnIndxLU[i+n], nnIndxLU[i+n]);
                 const Eigen::Map<const VectorXd> eigenc(&c[nnIndxLU[i]], nnIndxLU[i+n]);
+                // std::cout << "C = \n" << eigenC << '\n';
+                // std::cout << "c = \n" << eigenc << '\n';
                 // Might be good to figure out how to use solveInPlace here.
                 auto Blocal = eigenB.segment(nnIndxLU[i], nnIndxLU[n+i]);
                 Blocal = eigenC.llt().solve(eigenc);
+                // std::cout << "Blocal = \n" << Blocal << '\n';
                 eigenF[i] = cm.cov(0.0) - Blocal.dot(eigenc);
             } else {
                 B[i] = 0;
                 F[i] = cm.cov(0.0);
             }
+            // std::cout << "F = " << F[i] << '\n';
         }
     }
 

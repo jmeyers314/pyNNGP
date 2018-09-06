@@ -59,14 +59,14 @@ namespace pyNNGP {
 
         // Use a particular covariance model to update given B and F vectors.
         void updateBF(double*, double*, CovModel&);
+        void updateW();
+        void updateBeta();
+        void updateTauSq();
 
     private:
         void mkUIndx();
         void mkUIIndx();
         void mkCD();
-        void updateW();
-        void updateBeta();
-        void updateTauSq();
     };
 
 }

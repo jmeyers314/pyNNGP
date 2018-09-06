@@ -31,26 +31,25 @@ namespace pyNNGP {
 
     Node::Node(int i) : index(i), left(nullptr), right(nullptr) {}
 
-    Node* miniInsert(Node* Tree, const double* coords, int index, int d) {
+    Node* miniInsert(Node* Tree, const MatrixXd& coords, int index, int d) {
         // 2D-tree
         if(!Tree) return new Node(index);
 
-        if (coords[2*index+d] <= coords[2*Tree->index+d])
+        if (coords(d,index) <= coords(d,Tree->index))
             Tree->left = miniInsert(Tree->left, coords, index, (d+1)%2);
         else
             Tree->right = miniInsert(Tree->right, coords, index, (d+1)%2);
         return Tree;
     }
 
-    void get_nn(Node* Tree, int index, int d, const double* coords,
+    void get_nn(Node* Tree, int index, int d, const MatrixXd& coords,
                 double* nnDist, int* nnIndx, int iNNIndx, int iNN) {
         // input: Tree, index, d, coords
         // output: nnDist, nnIndx
 
         if(!Tree) return;
 
-        double disttemp = dist2(coords[2*index], coords[2*index+1],
-                                coords[2*Tree->index], coords[2*Tree->index+1]);
+        double disttemp = dist2(coords.col(index), coords.col(Tree->index));
 
         if(index!=Tree->index && disttemp<nnDist[iNNIndx+iNN-1]) {
             nnDist[iNNIndx+iNN-1]=disttemp;
@@ -61,16 +60,16 @@ namespace pyNNGP {
         Node* temp1=Tree->left;
         Node* temp2=Tree->right;
 
-        if(coords[2*index+d]>coords[2*Tree->index+d])
+        if(coords(d,index)>coords(d,Tree->index))
             std::swap(temp1,temp2);
         get_nn(temp1,index,(d+1)%2,coords,nnDist,nnIndx,iNNIndx,iNN);
-        if(fabs(coords[2*Tree->index+d]-coords[2*index+d])>nnDist[iNNIndx+iNN-1])
+        if(fabs(coords(d,Tree->index)-coords(d,index))>nnDist[iNNIndx+iNN-1])
             return;
         get_nn(temp2,index,(d+1)%2,coords,nnDist,nnIndx,iNNIndx,iNN);
     }
 
 
-    void mkNNIndxTree0(const int n, const int m, const double* coords,
+    void mkNNIndxTree0(const int n, const int m, const MatrixXd& coords,
                        int* nnIndx, double* nnDist, int* nnIndxLU) {
         int i, iNNIndx, iNN;
         double d;
@@ -93,7 +92,7 @@ namespace pyNNGP {
             if(i!=0) {
                 for(int j=time_through; j<i; j++) {
                     getNNIndx(i, m, iNNIndx, iNN);
-                	d = dist2(coords[2*i], coords[2*i+1], coords[2*j], coords[2*j+1]);
+                	d = dist2(coords.col(i), coords.col(j));
                     if(d < nnDist[iNNIndx+iNN-1]){
             	        nnDist[iNNIndx+iNN-1] = d;
             	        nnIndx[iNNIndx+iNN-1] = j;

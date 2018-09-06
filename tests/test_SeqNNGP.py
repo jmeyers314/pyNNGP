@@ -3,15 +3,22 @@ import pyNNGP
 
 def test_SeqNNGP():
     np.random.seed(5)
-    size = 100000
+    size = 10000
     m = 15
     y = np.random.normal(size=size)
     X = np.random.normal(size=size)
     coords = np.random.uniform(size=(size, 2))
 
-    covModel = pyNNGP.Exponential(5.0, 6.0)
+    phi = 6.0
+    phiA, phiB = 3.0, 3./0.01
+    phiTuning = 0.5
+    sigmaSq = 5.0
+    sigmaSqIGa, sigmaSqIGb = 2.0, 5.0
+    covModel = pyNNGP.Exponential(sigmaSq, phi, phiA, phiB, phiTuning, sigmaSqIGa, sigmaSqIGb)
+
     tausqr = 1.0
     snngp = pyNNGP.SeqNNGP(y, X, coords, m, covModel, tausqr)
+    snngp.sample(10)
 
 
 def test_nnIndx():
@@ -33,7 +40,13 @@ def test_nnIndx():
         [0.9082078, 0.62911404]
     ])
 
-    covModel = pyNNGP.Exponential(5.0, 6.0)
+    phi = 6.0
+    phiA, phiB = 3.0, 3./0.01
+    phiTuning = 0.5
+    sigmaSq = 5.0
+    sigmaSqIGa, sigmaSqIGb = 2.0, 5.0
+
+    covModel = pyNNGP.Exponential(sigmaSq, phi, phiA, phiB, phiTuning, sigmaSqIGa, sigmaSqIGb)
     tausqr = 1.0
     snngp = pyNNGP.SeqNNGP(y, X, coords, m, covModel, tausqr)
 
@@ -57,5 +70,5 @@ def test_nnIndx():
 
 
 if __name__ == '__main__':
-    # test_SeqNNGP()
+    test_SeqNNGP()
     test_nnIndx()

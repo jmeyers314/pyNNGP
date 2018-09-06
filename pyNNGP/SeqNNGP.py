@@ -16,3 +16,6 @@ class SeqNNGP:
             self.X.shape[0], self.X.shape[1], self.nNeighbors,
             self.covModel, self.tausqr
         )
+
+    def sample(self, N):
+        self._SeqNNGP.sample(N)

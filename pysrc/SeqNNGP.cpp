@@ -1,4 +1,5 @@
 #include "SeqNNGP.h"
+#include "covModel.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
@@ -21,6 +22,7 @@ namespace pyNNGP {
     {
         py::class_<SeqNNGP>(m, "SeqNNGP")
             .def(py::init(&MakeSeqNNGP))
+            .def("sample", &SeqNNGP::sample)
             .def_property_readonly("nnIndx",
                 [](SeqNNGP& s) -> py::array_t<int> {
                     return {{s.nnIndx.size()},

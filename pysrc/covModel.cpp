@@ -9,17 +9,17 @@ namespace pyNNGP {
         py::class_<CovModel>(m, "CovModel");
 
         py::class_<ExponentialCovModel, CovModel>(m, "Exponential")
-            .def(py::init<double,double>())
+            .def(py::init<double,double,double,double,double,double,double>())
             .def("cov", &ExponentialCovModel::cov);
 
 
         py::class_<SphericalCovModel, CovModel>(m, "Spherical")
-            .def(py::init<double,double>())
+            .def(py::init<double,double,double,double,double,double,double>())
             .def("cov", &SphericalCovModel::cov);
 
 
         py::class_<SqExpCovModel, CovModel>(m, "SqExp")
-            .def(py::init<double,double>())
+            .def(py::init<double,double,double,double,double,double,double>())
             .def("cov", &SqExpCovModel::cov);
     }
 }

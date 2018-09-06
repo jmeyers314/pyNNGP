@@ -1,7 +1,6 @@
 #ifndef NNGP_SeqNNGP_h
 #define NNGP_SeqNNGP_h
 
-#include "covModel.h"
 #include <vector>
 #include <random>
 #include <Eigen/Dense>
@@ -10,6 +9,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
 namespace pyNNGP {
+    class CovModel;
     class SeqNNGP {
     public:
         SeqNNGP(const double* y, const double* X, const double* coords,
@@ -23,49 +23,48 @@ namespace pyNNGP {
         std::vector<int> uiIndx;    // [nIndx]
         std::vector<int> CIndx;     // [2*n]
 
+        const int p;  // Number of indicators per input location
+        const int n;  // Number of input locations
+        const int m;  // Number of nearest neighbors
+        const int nIndx;  // Total number of neighbors (DAG edges)
+
+        const Eigen::Map<const VectorXd> y;       // [n]
+        const Eigen::Map<const MatrixXd> X;       // [n, p]
+        const Eigen::Map<const MatrixXd> coords;  // [n, 2]
+        const MatrixXd XtX;
+
+        CovModel& cm;
+
+        double tauSq;  // Measurement uncertainty
+
+        std::random_device rd;
+        std::mt19937 gen;
+
+        std::vector<double> B;      // [nIndx]
+        std::vector<double> F;      // [n]
+        std::vector<double> Bcand;  // [nIndx]
+        std::vector<double> Fcand;  // [n]
+        std::vector<double> c;      // [nIndx]
+        std::vector<double> C;      // [j?]
+        std::vector<double> D;      // [j?]
+        VectorXd w;                 // [n] Latent GP samples?
+        VectorXd beta;              // [p] Unknown linear model coefficients
+        double tauSqIGa;
+        double tauSqIGb;
+
+        void sample(int nSamples);
+
+        void updateBF(double*, double*, CovModel&);
+
     private:
-        const int _p;  // Number of indicators per input location
-        const int _n;  // Number of input locations
-        const int _m;  // Number of nearest neighbors
-        const int _nIndx;  // Total number of neighbors (DAG edges)
-
-        const Eigen::Map<const VectorXd> _y;       // [n]
-        const Eigen::Map<const MatrixXd> _X;       // [n, p]
-        const Eigen::Map<const MatrixXd> _coords;  // [n, 2]
-        const MatrixXd _XtX;
-
-        CovModel& _cm;
-
-        double _tausqr;  // Measurement uncertainty
-
-        std::random_device _rd;
-        std::mt19937 _gen;
-
-        std::vector<double> _B;      // [nIndx]
-        std::vector<double> _F;      // [n]
-        std::vector<double> _BCand;  // [nIndx]
-        std::vector<double> _FCand;  // [n]
-        std::vector<double> _c;      // [nIndx]
-        std::vector<double> _C;      // [j?]
-        std::vector<double> _D;      // [j?]
-        VectorXd _w;                 // [n] Latent GP samples?
-        VectorXd _beta;              // [p] Unknown linear model coefficients
-        double _tauSqIGa;
-        double _tauSqIGb;
-        double _sigmaSqrIGa;
-        double _sigmaSqrIGb;
-        double _sigmaSqr;
-
         void mkUIndx();
         void mkUIIndx();
         void mkCD();
-        void updateBF();
         void updateW();
         void updateBeta();
-        void updateTauSqr();
-        void updateSigmaSqr();
-        void updateTheta();
+        void updateTauSq();
     };
+
 }
 
 #endif

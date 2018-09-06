@@ -1,3 +1,10 @@
+.eggs/
+.pytest_cache/
+build/
+dist/
+pyNNGP.egg-info/
+*__pycache__*
+
 # Prerequisites
 *.d
 

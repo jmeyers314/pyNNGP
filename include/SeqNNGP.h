@@ -31,8 +31,8 @@ namespace pyNNGP {
 
         // Use existing memory here (allocated in python-layer)
         const Eigen::Map<const VectorXd> y;       // [n]
-        const Eigen::Map<const MatrixXd> X;       // [n, p]
-        const Eigen::Map<const MatrixXd> coords;  // [n, 2]
+        const Eigen::Map<const MatrixXd> Xt;      // [p, n]  ([n, p] in python)
+        const Eigen::Map<const MatrixXd> coords;  // [2, n]  ([n, 2] in python)
         const MatrixXd XtX;
 
         CovModel& cm;  // Model for covariances

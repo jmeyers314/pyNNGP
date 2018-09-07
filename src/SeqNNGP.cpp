@@ -18,8 +18,8 @@ namespace pyNNGP {
         int _p, int _n, int _m, CovModel& _cm, const double _tauSq) :
         p(_p), n(_n), m(_m), nIndx(m*(m+1)/2+(n-m-1)*m),
         y(_y, n),
-        X(_X, p, n), coords(_coords, 2, n), // Note n x m in python is m x n in Eigen (by default).
-        XtX(X.transpose()*X),
+        Xt(_X, p, n), coords(_coords, 2, n), // Note n x m in python is m x n in Eigen (by default).
+        XtX(Xt*Xt.transpose()),
         cm(_cm), tauSq(_tauSq),
         gen(rd()),
         w(VectorXd::Zero(n)), beta(VectorXd::Zero(p))
@@ -56,17 +56,12 @@ namespace pyNNGP {
             diff = end-start;
             std::cout << "duration = " << diff.count() << "s" << '\n';
 
-            // ExponentialCovModel covModel{5.0, 6.0};
             std::cout << "updating BF" << '\n';
             start = std::chrono::high_resolution_clock::now();
             updateBF(&B[0], &F[0], cm);
             end = std::chrono::high_resolution_clock::now();
             diff = end-start;
             std::cout << "duration = " << diff.count() << "s" << '\n';
-
-            // // For now...
-            // beta = VectorXd(2);
-            // beta << 2.346582, 1.888253;
 
             tauSqIGa = 2.0;
             tauSqIGb = 1.0;
@@ -117,7 +112,6 @@ namespace pyNNGP {
     }
 
     void SeqNNGP::mkCD() {
-        // What is C?  Something to do with covariance...
         CIndx.resize(2*n);
         int j=0;
         for(int i=0; i<n; i++){ //zero should never be accessed
@@ -156,18 +150,13 @@ namespace pyNNGP {
         #pragma omp parallel for private(k, ell)
         #endif
         for(int i=0; i<n; i++) {
-            // std::cout << "\n\ni = " << i << '\n';
             if(i>0) {
                 // Construct C and c matrices that we'll Chosolve below
                 // I think these are essentially the constituents of eq (3) of Datta++14
                 // I.e., we're updating auto- and cross-covariances
                 for(k=0; k<nnIndxLU[n+i]; k++) {
                     c[nnIndxLU[i]+k] = cm.cov(nnDist[nnIndxLU[i]+k]);
-                    // assert(nnDist[nnIndxLU[i]+k] == dist2(coords.col(i), coords.col(nnIndxLU[i]+k)));
-                    // std::cout << "nnDist[nnIndxLU[i]+k] = " << nnDist[nnIndxLU[i]+k] << '\n';
-                    // std::cout << "coords.col(i) = " << coords.col(i) << '\n';
-                    // std::cout << "coords.col(nnIndxLU[i]+k) = " << coords.col(nnIndxLU[i]+k) << '\n';
-                    // std::cout << "dist2(coords.col(i), coords.col(nnIndxLU[i]+k)) = " << dist2(coords.col(i), coords.col(nnIndxLU[i]+k)) << '\n';
+                    assert(nnDist[nnIndxLU[i]+k] == dist2(coords.col(i), coords.col(nnIndx[nnIndxLU[i]+k])));
                     for(ell=0; ell<=k; ell++) {
                         C[CIndx[i]+ell*nnIndxLU[n+i]+k] =
                             cm.cov(D[CIndx[i]+ell*nnIndxLU[n+i]+k]);
@@ -176,18 +165,14 @@ namespace pyNNGP {
                 // Note symmetric, so shouldn't matter if I screw up row/col major here.
                 const Eigen::Map<const MatrixXd> eigenC(&C[CIndx[i]], nnIndxLU[i+n], nnIndxLU[i+n]);
                 const Eigen::Map<const VectorXd> eigenc(&c[nnIndxLU[i]], nnIndxLU[i+n]);
-                // std::cout << "C = \n" << eigenC << '\n';
-                // std::cout << "c = \n" << eigenc << '\n';
                 // Might be good to figure out how to use solveInPlace here.
                 auto Blocal = eigenB.segment(nnIndxLU[i], nnIndxLU[n+i]);
                 Blocal = eigenC.llt().solve(eigenc);
-                // std::cout << "Blocal = \n" << Blocal << '\n';
                 eigenF[i] = cm.cov(0.0) - Blocal.dot(eigenc);
             } else {
                 B[i] = 0;
                 F[i] = cm.cov(0.0);
             }
-            // std::cout << "F = " << F[i] << '\n';
         }
     }
 
@@ -215,118 +200,27 @@ namespace pyNNGP {
             for(int j=0; j<nnIndxLU[n+i]; j++){
                 e += B[nnIndxLU[i]+j] * w[nnIndx[nnIndxLU[i]+j]];
             }
-            double mu = y[i] - X.row(i).dot(beta)/tauSq + e/F[i] + a;
+            double mu = y[i] - Xt.col(i).dot(beta)/tauSq + e/F[i] + a;
             double var = 1.0/(1.0/tauSq + 1.0/F[i] + v);
 
             std::normal_distribution<> norm{mu*var, std::sqrt(var)};
             w[i] = norm(gen);
         }
-        // For debugging
-        // w[0] =   1.508921;
-        // w[1] =   0.250724;
-        // w[2] =   2.137284;
-        // w[3] =  -1.005202;
-        // w[4] =  -2.574499;
     }
 
     void SeqNNGP::updateBeta() {
-        VectorXd tmp_p{X.transpose()*(y-w)/tauSq};
+        VectorXd tmp_p{Xt*(y-w)/tauSq};
         MatrixXd tmp_pp{XtX/tauSq};
 
         // May be more efficient ways to do this...
         VectorXd mean = tmp_pp.llt().solve(tmp_p);
         MatrixXd cov = tmp_pp.inverse();
         beta = MVNorm(mean, cov)(gen);
-
-        // For debugging
-        // beta << 2.114505, 2.841327;
-        // std::cout << "beta = \n" << beta << '\n';
     }
 
     void SeqNNGP::updateTauSq() {
-        VectorXd tmp_n = y - w - X*beta;
+        VectorXd tmp_n = y - w - Xt.transpose()*beta;
         std::gamma_distribution<> gamma{tauSqIGa+n/2.0, tauSqIGb+0.5*tmp_n.squaredNorm()};
         tauSq = 1.0/gamma(gen);
     }
-
-    // void SeqNNGP::updateTheta() {
-    //     // Knows about w, B, F, indexing arrays, priors, RNG, MH proposal parameters,
-    //     //   scratch-space for proposed B, F, theta?, other arrays?  (C, D)
-    //
-    //     updateBF();
-    //     double a=0.0;
-    //     double logDet=0.0;
-    //
-    //     #ifdef _OPENMP
-    //     #pragma omp parallel for private (e, j, b) reduction(+:a, logDet)
-    //     #endif
-    //     for(int i=0; i<n; i++) {
-    //         double b = w[i];
-    //         if(nnIndxLU[n+i] > 0) {
-    //             double e=0.0;
-    //             for(int j=0; j<nnIndxLU[n+i]; j++) {
-    //                 e += B[nnIndxLU[i]+j]*w[nnIndx[nnIndxLU[i]+j]];
-    //             }
-    //             b -= e;
-    //         }
-    //         a += b*b/F[i];
-    //         logDet += log(F[i]);
-    //     }
-    //
-    //     double logPostCurrent = -0.5*logDet - 0.5*a;
-    //     // logPostCurrent += std::log(theta[phiIndx] - phiUnifa) + std::log(phiUnifb - theta[phiIndx]);
-    //     // if(corName == "matern"){
-    //     //     logPostCurrent += log(theta[nuIndx] - nuUnifa) + log(nuUnifb - theta[nuIndx]);
-    //     // }
-    //
-    // }
-    //
-    //     //candidate
-    //     phiCand = logitInv(rnorm(logit(theta[phiIndx], phiUnifa, phiUnifb), tuning[phiIndx]), phiUnifa, phiUnifb);
-    //     if(corName == "matern"){
-    //         nuCand = logitInv(rnorm(logit(theta[nuIndx], nuUnifa, nuUnifb), tuning[nuIndx]), nuUnifa, nuUnifb);
-    //     }
-    //
-    //     updateBF(BCand, FCand, c, C, D, d, nnIndxLU, CIndx, n, theta[sigmaSqIndx], phiCand, nuCand, covModel, bk, nuUnifb);
-    //
-    //     a = 0;
-    //     logDet = 0;
-    //
-    //     #ifdef _OPENMP
-    //     #pragma omp parallel for private (e, j, b) reduction(+:a, logDet)
-    //     #endif
-    //     for(i = 0; i < n; i++){
-    //         if(nnIndxLU[n+i] > 0){
-    //             e = 0;
-    //             for(j = 0; j < nnIndxLU[n+i]; j++){
-    //                 e += BCand[nnIndxLU[i]+j]*w[nnIndx[nnIndxLU[i]+j]];
-    //             }
-    //             b = w[i] - e;
-    //         }else{
-    //             b = w[i];
-    //         }
-    //         a += b*b/FCand[i];
-    //         logDet += log(FCand[i]);
-    //     }
-    //
-    //     logPostCand = -0.5*logDet - 0.5*a;
-    //     logPostCand += log(phiCand - phiUnifa) + log(phiUnifb - phiCand);
-    //     if(corName == "matern"){
-    //         logPostCand += log(nuCand - nuUnifa) + log(nuUnifb - nuCand);
-    //     }
-    //
-    //     if(runif(0.0,1.0) <= exp(logPostCand - logPostCurrent)){
-    //
-    //         std::swap(BCand, B);
-    //         std::swap(FCand, F);
-    //
-    //         theta[phiIndx] = phiCand;
-    //         if(corName == "matern"){
-    //             theta[nuIndx] = nuCand;
-    //         }
-    //
-    //         accept++;
-    //         batchAccept++;
-    //     }
-    // }
 }

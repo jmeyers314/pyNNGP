@@ -46,6 +46,14 @@ def make_uIndx(n, m, nnIndx):
     return np.array(uIndx), np.hstack([uIndxL, uIndxU]), np.array(uiIndx)
 
 
+def make_nnIndxLU(n, m):
+    nnIndxU = []
+    for i in range(n):
+        nnIndxU.append(min(i, m))
+    nnIndxL = [0]+list(np.cumsum(nnIndxU)[:-1])
+    return np.hstack([nnIndxL, nnIndxU])
+
+
 def test_indices():
     np.random.seed(57)
     n = 50
@@ -71,7 +79,16 @@ def test_indices():
     np.testing.assert_array_equal(snngp._SeqNNGP.uIndx, uIndx)
     np.testing.assert_array_equal(snngp._SeqNNGP.uIndxLU, uIndxLU)
     np.testing.assert_array_equal(snngp._SeqNNGP.uiIndx, uiIndx)
+    nnIndxLU = make_nnIndxLU(n, m)
+    np.testing.assert_array_equal(snngp._SeqNNGP.nnIndxLU, nnIndxLU)
 
+    # Test nnDist
+    for i in range(n):
+        for k in range(nnIndxLU[n+i]):
+            assert nnDist[nnIndxLU[i]+k] == np.sqrt(np.sum((coords[i]-coords[nnIndx[nnIndxLU[i]+k]])**2))
+
+    snngp.sample(10)
+    assert np.all(np.isfinite(snngp.w))
 
 if __name__ == '__main__':
     test_indices()

@@ -22,7 +22,7 @@ namespace pyNNGP {
         XtX(Xt*Xt.transpose()),
         cm(_cm), tauSq(_tauSq),
         gen(rd()),
-        w(VectorXd::Zero(n)), beta(VectorXd::Zero(p))
+        w(VectorXd::Zero(n))
         {
             // build the neighbor index
             nnIndx.resize(nIndx);
@@ -63,8 +63,10 @@ namespace pyNNGP {
             diff = end-start;
             std::cout << "duration = " << diff.count() << "s" << '\n';
 
-            tauSqIGa = 2.0;
+            tauSqIGa = 1.0;
             tauSqIGb = 1.0;
+
+            beta = Xt.transpose().bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y);
         }
 
     void SeqNNGP::sample(int nSamples) {

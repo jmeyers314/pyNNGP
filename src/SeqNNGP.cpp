@@ -202,7 +202,7 @@ namespace pyNNGP {
             for(int j=0; j<nnIndxLU[n+i]; j++){
                 e += B[nnIndxLU[i]+j] * w[nnIndx[nnIndxLU[i]+j]];
             }
-            double mu = y[i] - Xt.col(i).dot(beta)/tauSq + e/F[i] + a;
+            double mu = (y[i] - Xt.col(i).dot(beta))/tauSq + e/F[i] + a;
             double var = 1.0/(1.0/tauSq + 1.0/F[i] + v);
 
             std::normal_distribution<> norm{mu*var, std::sqrt(var)};

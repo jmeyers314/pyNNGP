@@ -37,3 +37,4 @@ pyNNGP.egg-info/
 *.exe
 *.out
 *.app
+.clang_complete

@@ -72,6 +72,9 @@ namespace pyNNGP {
         void updateW();
         void updateBeta();
 
+        void predict(const double* X0, const double* coords, const int* nnIndx0, int q,
+                     double* w0, double* y0);
+
     private:
         void mkUIndx();
         void mkUIIndx();

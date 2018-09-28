@@ -118,6 +118,11 @@ namespace pyNNGP {
             }
         }
 
+        virtual void update(SeqNNGP& seq) {
+            updateSigmaSq(seq);
+            updatePhi(seq);
+        }
+
     protected:
         double _sigmaSq;
         double _phi;
@@ -125,6 +130,7 @@ namespace pyNNGP {
         const double _phiTuning;  // Width of phi proposal distribution
         const double _sigmaSqIGa, _sigmaSqIGb;  // Inverse gamma prior on sigmaSq
     };
+
 
     class ExponentialCovModel : public CovModel {
     public:

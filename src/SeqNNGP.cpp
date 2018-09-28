@@ -73,8 +73,7 @@ namespace pyNNGP {
             updateW();
             updateBeta();
             updateTauSq();
-            cm.updateSigmaSq(*this);
-            cm.updatePhi(*this);
+            cm.update(*this);
         }
     }
 

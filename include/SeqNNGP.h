@@ -12,8 +12,8 @@ namespace pyNNGP {
     class CovModel;
     class SeqNNGP {
     public:
-        SeqNNGP(const double* y, const double* X, const double* coords,
-                int p, int n, int m, CovModel& cm, const double tausqr);
+        SeqNNGP(const double* _y, const double* _X, const double* _coords,
+                int _p, int _n, int _m, CovModel& _cm, const double _tauSq);
 
         // Allocate our own memory for these
         // Nearest neighbors index.  Holds the indices of the neighbors of each node.

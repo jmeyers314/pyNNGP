@@ -13,14 +13,26 @@ namespace pyNNGP {
     class SeqNNGP {
     public:
         SeqNNGP(const double* y, const double* X, const double* coords,
-                int p, int n, int nNeighbors, CovModel& cm, const double tausqr);
+                int p, int n, int m, CovModel& cm, const double tausqr);
 
         // Allocate our own memory for these
+        // Nearest neighbors index.  Holds the indices of the neighbors of each node.
         std::vector<int> nnIndx;    // [nIndx]
+
+        // Nearest neighbors ranges
+        // Lower part holds starting index for each node
+        // Upper part holds number of elements for each node
         std::vector<int> nnIndxLU;  // [2*n]
+
+        // Distances between neighbors
         std::vector<double> nnDist; // [nIndx]
+
+        // Reverse index.  Holds which nodes have n as a neighbor
         std::vector<int> uIndx;     // [nIndx]
+
+        // Ranges for reverse index.
         std::vector<int> uIndxLU;   // [2*n]
+        // Which neighbor is it?
         std::vector<int> uiIndx;    // [nIndx]
         std::vector<int> CIndx;     // [2*n]
 

@@ -40,7 +40,6 @@ namespace pyNNGP {
             std::cout << "Building neighbors of neighbors index" << '\n';
             start = std::chrono::high_resolution_clock::now();
             mkUIndx();
-            mkUIIndx();
             end = std::chrono::high_resolution_clock::now();
             diff = end-start;
             std::cout << "duration = " << diff.count() << "s" << '\n';
@@ -80,37 +79,37 @@ namespace pyNNGP {
     }
 
     void SeqNNGP::mkUIndx() {
-        uIndx.resize(nIndx);
+        uIndx.reserve(nIndx);
+        uiIndx.reserve(nIndx);
         uIndxLU.resize(2*n);
 
-        for(int i=0, ell=0; i<n; i++) {
-            uIndxLU[i] = ell;
-            int h=0;
-            for(int j=0; j<n; j++) {
-                int iNNIndx, iNN;
-                getNNIndx(j, m, iNNIndx, iNN);
-                // Go through each neighbor of j
-                for(int k=0; k<iNN; k++) {
-                    if(nnIndx[iNNIndx+k] == i) {
-                        uIndx[ell+h] = j;
-                        h++;
-                    }
+        // Look through each coordinate (node)
+        for(int i=0; i<n; i++) {
+            int k=0;
+            // Look through nodes that might have i as a neighbor (child)
+            for(int j=i+1; j<n; j++) {
+                // Get start and end range of where to check nnIndx if i is a child of j
+                int nnStart, nnEnd;
+                if (j<m) {
+                    nnStart = j*(j-1)/2;
+                    nnEnd = (j+1)*j/2;
+                } else {
+                    nnStart = m*(m-1)/2 + m*(j-m);
+                    nnEnd = nnStart + m;
+                }
+                // Actually do the search for i
+                auto result = std::find(&nnIndx[nnStart], &nnIndx[nnEnd], i);
+                if (result != &nnIndx[nnEnd]) {  // If found
+                    uIndx.push_back(j);  // Record that j is a parent of i
+                    uiIndx.push_back(int(result-&nnIndx[nnStart]));  // Record which of i's parent it is
+                    k++;  // Increment the number of nodes that have j as a parent
                 }
             }
-            ell += h;
-            uIndxLU[n+i] = h;
+            uIndxLU[n+i] = k;  // Set the number of nodes that have j as a parent
         }
-    }
-
-    void SeqNNGP::mkUIIndx() {
-        uiIndx.resize(nIndx);
-        for(int i=0; i<n; i++){
-            for(int j=0; j<uIndxLU[n+i]; j++) { //for each location that has i as a neighbor
-                //index of a location that has i as a neighbor
-                int k = uIndx[uIndxLU[i]+j];
-                uiIndx[uIndxLU[i]+j] = which(i, &nnIndx[nnIndxLU[k]], nnIndxLU[n+k]);
-            }
-        }
+        uIndxLU[0] = 0;
+        for (int i=0; i<n-1; i++)
+            uIndxLU[i+1] = uIndxLU[i]+uIndxLU[n+i];
     }
 
     void SeqNNGP::mkCD() {

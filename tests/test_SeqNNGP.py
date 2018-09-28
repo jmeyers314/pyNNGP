@@ -56,7 +56,7 @@ def make_nnIndxLU(n, m):
 
 def test_indices():
     np.random.seed(57)
-    n = 50
+    n = 500
     m = 10
 
     y = np.random.normal(size=n)

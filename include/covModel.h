@@ -28,15 +28,17 @@ namespace pyNNGP {
 
         virtual void updateSigmaSq(SeqNNGP& seq) {
             double a = 0.0;
-
+            double e = 0.0;
+            double b = 0.0;
+            int j = 0;
             #ifdef _OPENMP
-            #pragma omp parallel for private (e, j, b) reduction(+:a, logDet)
+            #pragma omp parallel for private (e, j, b) reduction(+:a)
             #endif
             for(int i=0; i<seq.n; i++){
-                double b = seq.w[i];
+                b = seq.w[i];
                 if(seq.nnIndxLU[seq.n+i] > 0){
-                    double e = 0.0;
-                    for(int j=0; j<seq.nnIndxLU[seq.n+i]; j++){
+                    e = 0.0;
+                    for(j=0; j<seq.nnIndxLU[seq.n+i]; j++){
                         e += seq.B[seq.nnIndxLU[i]+j]*seq.w[seq.nnIndx[seq.nnIndxLU[i]+j]];
                     }
                     b -= e;
@@ -52,17 +54,20 @@ namespace pyNNGP {
             double phiCurrent = getPhi();
             seq.updateBF(&seq.B[0], &seq.F[0], *this);
             double a = 0.0;
+            double b = 0.0;
+            double e = 0.0;
             double logDet = 0.0;
+            int j = 0;
 
             // Get the current log determinant
             #ifdef _OPENMP
             #pragma omp parallel for private (e, j, b) reduction(+:a, logDet)
             #endif
             for (int i=0; i<seq.n; i++){
-                double b = seq.w[i];
+                b = seq.w[i];
                 if(seq.nnIndxLU[seq.n+i] > 0){
-                    double e = 0.0;
-                    for(int j=0; j<seq.nnIndxLU[seq.n+i]; j++){
+                    e = 0.0;
+                    for(j=0; j<seq.nnIndxLU[seq.n+i]; j++){
                         e += seq.B[seq.nnIndxLU[i]+j]*seq.w[seq.nnIndx[seq.nnIndxLU[i]+j]];
                     }
                     b -= e;

@@ -5,9 +5,11 @@ namespace py = pybind11;
 namespace pyNNGP {
     void pyExportSeqNNGP(py::module& m);
     void pyExportCovModel(py::module& m);
+    void pyExportNoiseModel(py::module& m);
 
     PYBIND11_MODULE(_pyNNGP, m) {
         pyExportSeqNNGP(m);
         pyExportCovModel(m);
+        pyExportNoiseModel(m);
     }
 }

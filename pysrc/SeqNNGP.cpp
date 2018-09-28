@@ -1,5 +1,6 @@
 #include "SeqNNGP.h"
 #include "covModel.h"
+#include "noiseModel.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
@@ -9,13 +10,13 @@ namespace pyNNGP {
     static SeqNNGP* MakeSeqNNGP(
         size_t iy, size_t iX, size_t icoords,
         int p, int n, int nNeighbors,
-        CovModel& cm, double tausqr)
+        CovModel& cm, NoiseModel& nm)
     {
         const double* y = reinterpret_cast<double*>(iy);
         const double* X = reinterpret_cast<double*>(iX);
         const double* coords = reinterpret_cast<double*>(icoords);
 
-        return new SeqNNGP(y, X, coords, p, n, nNeighbors, cm, tausqr);
+        return new SeqNNGP(y, X, coords, p, n, nNeighbors, cm, nm);
     }
 
     void pyExportSeqNNGP(py::module& m)
@@ -25,7 +26,6 @@ namespace pyNNGP {
             .def("sample", &SeqNNGP::sample)
             .def("updateW", &SeqNNGP::updateW)
             .def("updateBeta", &SeqNNGP::updateBeta)
-            .def("updateTauSq", &SeqNNGP::updateTauSq)
             .def_property_readonly("nnIndx",
                 [](SeqNNGP& s) -> py::array_t<int> {
                     return {{s.nnIndx.size()},
@@ -113,7 +113,6 @@ namespace pyNNGP {
                     &s.beta[0],
                     py::cast(s)};
                 }
-            )
-            .def_readonly("tauSq", &SeqNNGP::tauSq);
+            );
     }
 }

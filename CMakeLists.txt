@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12.0)
 project(_pyNNGP CXX)
 set(CMAKE_VERBOSE_MAKEFILE True)
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 cmake_policy(SET CMP0063 NEW)  # Compile the static lib with hidden visibility.
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_MACOSX_RPATH 1)
@@ -15,6 +15,7 @@ set(PYSRC_FILES
   pysrc/pyNNGP.cpp
   pysrc/SeqNNGP.cpp
   pysrc/CovModel.cpp
+  pysrc/NoiseModel.cpp
 )
 set(SRC_FILES
   src/SeqNNGP.cpp

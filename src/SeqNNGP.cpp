@@ -1,5 +1,6 @@
 #include "SeqNNGP.h"
 #include "covModel.h"
+#include "noiseModel.h"
 #include "tree.h"
 #include "utils.h"
 
@@ -15,12 +16,11 @@ using Eigen::VectorXd;
 
 namespace pyNNGP {
     SeqNNGP::SeqNNGP(const double* _y, const double* _X, const double* _coords,
-        int _p, int _n, int _m, CovModel& _cm, const double _tauSq) :
+        int _p, int _n, int _m, CovModel& _cm, NoiseModel& _nm) :
         p(_p), n(_n), m(_m), nIndx(m*(m+1)/2+(n-m-1)*m),
         y(_y, n),
         Xt(_X, p, n), coords(_coords, 2, n), // Note n x m in python is m x n in Eigen (by default).
-        XtX(Xt*Xt.transpose()),
-        cm(_cm), tauSq(_tauSq),
+        cm(_cm), nm(_nm),
         gen(rd()),
         w(VectorXd::Zero(n))
         {
@@ -62,8 +62,7 @@ namespace pyNNGP {
             diff = end-start;
             std::cout << "duration = " << diff.count() << "s" << '\n';
 
-            tauSqIGa = 1.0;
-            tauSqIGb = 1.0;
+            nm.setX(Xt);
 
             beta = Xt.transpose().bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(y);
         }
@@ -72,7 +71,7 @@ namespace pyNNGP {
         for (int s=0; s<nSamples; s++) {
             updateW();
             updateBeta();
-            updateTauSq();
+            nm.update(*this);
             cm.update(*this);
         }
     }
@@ -191,8 +190,8 @@ namespace pyNNGP {
                             b += B[nnIndxLU[jj]+k] * w[kk]; //covariance between jj and kk and the random effect of kk
                         }
                     }
-                    a += B[nnIndxLU[jj]+uiIndx[uIndxLU[i]+j]]*(w[jj]-b)/F[jj];
-                    v += pow(B[nnIndxLU[jj]+uiIndx[uIndxLU[i]+j]],2)/F[jj];
+                    a += B[nnIndxLU[jj] + uiIndx[uIndxLU[i]+j]] * (w[jj]-b) / F[jj];
+                    v += pow(B[nnIndxLU[jj] + uiIndx[uIndxLU[i]+j]], 2) / F[jj];
                 }
             }
 
@@ -200,8 +199,8 @@ namespace pyNNGP {
             for(int j=0; j<nnIndxLU[n+i]; j++){
                 e += B[nnIndxLU[i]+j] * w[nnIndx[nnIndxLU[i]+j]];
             }
-            double mu = (y[i] - Xt.col(i).dot(beta))/tauSq + e/F[i] + a;
-            double var = 1.0/(1.0/tauSq + 1.0/F[i] + v);
+            double mu = (y[i] - Xt.col(i).dot(beta))*nm.invTauSq(i) + e/F[i] + a;
+            double var = 1.0/(nm.invTauSq(i) + 1.0/F[i] + v);
 
             std::normal_distribution<> norm{mu*var, std::sqrt(var)};
             w[i] = norm(gen);
@@ -209,18 +208,12 @@ namespace pyNNGP {
     }
 
     void SeqNNGP::updateBeta() {
-        VectorXd tmp_p{Xt*(y-w)/tauSq};
-        MatrixXd tmp_pp{XtX/tauSq};
+        VectorXd tmp_p{nm.getXtW()*(y-w)};
+        MatrixXd tmp_pp{nm.getXtWX()};
 
         // May be more efficient ways to do this...
         VectorXd mean = tmp_pp.llt().solve(tmp_p);
         MatrixXd cov = tmp_pp.inverse();
         beta = MVNorm(mean, cov)(gen);
-    }
-
-    void SeqNNGP::updateTauSq() {
-        VectorXd tmp_n = y - w - Xt.transpose()*beta;
-        std::gamma_distribution<> gamma{tauSqIGa+n/2.0, tauSqIGb+0.5*tmp_n.squaredNorm()};
-        tauSq = 1.0/gamma(gen);
     }
 }

@@ -68,10 +68,15 @@ def test_indices():
     phiTuning = 0.5
     sigmaSq = 5.0
     sigmaSqIGa, sigmaSqIGb = 2.0, 5.0
-
     covModel = pyNNGP.Exponential(sigmaSq, phi, phiA, phiB, phiTuning, sigmaSqIGa, sigmaSqIGb)
-    tausqr = 1.0
-    snngp = pyNNGP.SeqNNGP(y, X, coords, m, covModel, tausqr)
+
+    tauSq = 1.0
+    tauSqIGa = 1.0
+    tauSqIGb = 1.0
+    noiseModel = pyNNGP.ConstHomogeneousNoiseModel(tauSq)
+
+    snngp = pyNNGP.SeqNNGP(y, X, coords, m, covModel, noiseModel)
+
     nnIndx, nnDist = make_nnIndx(coords, m)
     np.testing.assert_array_equal(snngp._SeqNNGP.nnIndx, nnIndx)
     np.testing.assert_array_equal(snngp._SeqNNGP.nnDist, nnDist)

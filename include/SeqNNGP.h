@@ -10,10 +10,11 @@ using Eigen::VectorXd;
 
 namespace pyNNGP {
     class CovModel;
+    class NoiseModel;
     class SeqNNGP {
     public:
         SeqNNGP(const double* _y, const double* _X, const double* _coords,
-                int _p, int _n, int _m, CovModel& _cm, const double _tauSq);
+                int _p, int _n, int _m, CovModel& _cm, NoiseModel& _nm);
 
         // Allocate our own memory for these
         // Nearest neighbors index.  Holds the indices of the neighbors of each node.
@@ -45,10 +46,9 @@ namespace pyNNGP {
         const Eigen::Map<const VectorXd> y;       // [n]
         const Eigen::Map<const MatrixXd> Xt;      // [p, n]  ([n, p] in python)
         const Eigen::Map<const MatrixXd> coords;  // [2, n]  ([n, 2] in python)
-        const MatrixXd XtX;
 
-        CovModel& cm;  // Model for covariances
-        double tauSq;  // Measurement uncertainty
+        CovModel& cm;  // Model for GP covariances
+        NoiseModel& nm;  // Model for additional measurement noise
 
         std::random_device rd;
         std::mt19937 gen;
@@ -64,8 +64,6 @@ namespace pyNNGP {
         std::vector<double> D;      // [~n*m*m]
         VectorXd w;                 // [n] Latent GP samples
         VectorXd beta;              // [p] Unknown linear model coefficients
-        double tauSqIGa;            // Priors for noise model
-        double tauSqIGb;
 
         void sample(int nSamples);  // One Gibbs iteration
 
@@ -73,7 +71,6 @@ namespace pyNNGP {
         void updateBF(double*, double*, CovModel&);
         void updateW();
         void updateBeta();
-        void updateTauSq();
 
     private:
         void mkUIndx();

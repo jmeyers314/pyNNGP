@@ -123,6 +123,8 @@ namespace pyNNGP {
             updatePhi(seq);
         }
 
+        virtual ~CovModel() {}
+
     protected:
         double _sigmaSq;
         double _phi;

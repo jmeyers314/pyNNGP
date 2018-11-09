@@ -12,6 +12,7 @@ namespace pyNNGP {
         virtual void setX(const Eigen::Ref<const MatrixXd>& Xt) = 0;
         virtual MatrixXd getXtW(void) const = 0;
         virtual MatrixXd getXtWX(void) const = 0;
+        virtual ~NoiseModel() {}
     protected:
         bool _isXSet;
         Eigen::Map<const MatrixXd> _XtW;

@@ -218,45 +218,45 @@ namespace pyNNGP {
         beta = MVNorm(mean, cov)(gen);
     }
 
-    void SeqNNGP::updateTauSq() {
-        VectorXd tmp_n = y - w - Xt.transpose()*beta;
-        std::gamma_distribution<> gamma{tauSqIGa+n/2.0, tauSqIGb+0.5*tmp_n.squaredNorm()};
-        tauSq = 1.0/gamma(gen);
-    }
-
-    // Ought to work to get a single sample of w/y for new points.  Note, this version doesn't
-    // Parallelize over samples.  Could probably parallelize over points though?  (But don't
-    // get to reuse distance measurements efficiently that way...)
-    void SeqNNGP::predict(const double* _X0, const double* _coords0, const int* _nnIndx0, int q,
-                 double* w0, double* y0)
-    {
-        const Eigen::Map<const MatrixXd> coords0(_coords0, 2, q);
-        const Eigen::Map<const MatrixXd> Xt0(_X0, p, q);
-        // Could probably make the following a MatrixXi since all points have exactly m neighbors
-        const Eigen::Map<const VectorXi> nnIndx0(_nnIndx0, m*q);
-
-        MatrixXd C(m, m);
-        VectorXd c(m);
-        for(int i=0; i<q; i++) {
-            for(int k=0; k<m; k++) {
-                // double d = dist2(coords.col(nnIndx0[k+q*i]), coords0.col(i));  //???? and below?
-                double d = dist2(coords.col(nnIndx0[i+q*k]), coords0.col(i));
-                c[k] = cm.cov(d);
-                for(int ell=0; ell<m; ell++) {
-                    d = dist2(coords.col(nnIndx0[i+q*k]), coords.col(i+q*ell));
-                    C(ell,k) = cm.cov(d);
-                }
-            }
-            auto tmp = C.llt().solve(c);
-            double d = 0.0;
-            for(int k=0; k<m; k++) {
-                d += tmp[k]*w[nnIndx0[i+q*k]];
-            }
-
-            w0[i] = std::normal_distribution<>{d, std::sqrt(cm.cov(0.0) - tmp.dot(c))}(gen);
-            y0[i] = std::normal_distribution<>{Xt0.col(i).dot(beta)+w0[i], std::sqrt(tauSq)}(gen);
-        }
-    }
+    // void SeqNNGP::updateTauSq() {
+    //     VectorXd tmp_n = y - w - Xt.transpose()*beta;
+    //     std::gamma_distribution<> gamma{tauSqIGa+n/2.0, tauSqIGb+0.5*tmp_n.squaredNorm()};
+    //     tauSq = 1.0/gamma(gen);
+    // }
+    //
+    // // Ought to work to get a single sample of w/y for new points.  Note, this version doesn't
+    // // Parallelize over samples.  Could probably parallelize over points though?  (But don't
+    // // get to reuse distance measurements efficiently that way...)
+    // void SeqNNGP::predict(const double* _X0, const double* _coords0, const int* _nnIndx0, int q,
+    //              double* w0, double* y0)
+    // {
+    //     const Eigen::Map<const MatrixXd> coords0(_coords0, 2, q);
+    //     const Eigen::Map<const MatrixXd> Xt0(_X0, p, q);
+    //     // Could probably make the following a MatrixXi since all points have exactly m neighbors
+    //     const Eigen::Map<const VectorXi> nnIndx0(_nnIndx0, m*q);
+    //
+    //     MatrixXd C(m, m);
+    //     VectorXd c(m);
+    //     for(int i=0; i<q; i++) {
+    //         for(int k=0; k<m; k++) {
+    //             // double d = dist2(coords.col(nnIndx0[k+q*i]), coords0.col(i));  //???? and below?
+    //             double d = dist2(coords.col(nnIndx0[i+q*k]), coords0.col(i));
+    //             c[k] = cm.cov(d);
+    //             for(int ell=0; ell<m; ell++) {
+    //                 d = dist2(coords.col(nnIndx0[i+q*k]), coords.col(i+q*ell));
+    //                 C(ell,k) = cm.cov(d);
+    //             }
+    //         }
+    //         auto tmp = C.llt().solve(c);
+    //         double d = 0.0;
+    //         for(int k=0; k<m; k++) {
+    //             d += tmp[k]*w[nnIndx0[i+q*k]];
+    //         }
+    //
+    //         w0[i] = std::normal_distribution<>{d, std::sqrt(cm.cov(0.0) - tmp.dot(c))}(gen);
+    //         y0[i] = std::normal_distribution<>{Xt0.col(i).dot(beta)+w0[i], std::sqrt(tauSq)}(gen);
+    //     }
+    // }
 }
 
 

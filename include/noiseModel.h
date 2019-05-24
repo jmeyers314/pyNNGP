@@ -19,6 +19,7 @@ namespace pyNNGP {
         MatrixXd _XtWX;
     };
 
+
     class IGNoiseModel : public NoiseModel {
     public:
         IGNoiseModel(double tauSq, double IGa, double IGb) :
@@ -58,6 +59,7 @@ namespace pyNNGP {
         double _IGb;
     };
 
+
     class ConstHomogeneousNoiseModel : public NoiseModel {
     public:
         ConstHomogeneousNoiseModel(double tauSq) :
@@ -89,6 +91,7 @@ namespace pyNNGP {
         double _tauSq;
         double _invTauSq;
     };
+
 
     class ConstHeterogeneousNoiseModel : public NoiseModel {
     public:

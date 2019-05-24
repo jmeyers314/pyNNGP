@@ -47,7 +47,7 @@ namespace pyNNGP {
             }
 
             std::gamma_distribution<> gamma{_sigmaSqIGa+seq.n/2.0, _sigmaSqIGb+0.5*a*_sigmaSq};
-            _sigmaSq = 1.0/gamma(seq.gen);
+            // _sigmaSq = 1.0/gamma(seq.gen);
         }
 
         virtual void updatePhi(SeqNNGP& seq) {

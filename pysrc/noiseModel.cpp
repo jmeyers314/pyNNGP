@@ -3,6 +3,7 @@
 #include <pybind11/numpy.h>
 
 namespace py = pybind11;
+using namespace pybind11::literals;
 
 namespace pyNNGP {
     static ConstHeterogeneousNoiseModel* MakeCHNM(
@@ -20,7 +21,7 @@ namespace pyNNGP {
             .def(py::init<double,double,double>());
 
         py::class_<ConstHomogeneousNoiseModel, NoiseModel>(m, "ConstHomogeneousNoiseModel")
-            .def(py::init<double>());
+            .def(py::init<double>(), "tauSq"_a);
 
         py::class_<ConstHeterogeneousNoiseModel, NoiseModel>(m, "ConstHeterogeneousNoiseModel")
             .def(py::init(&MakeCHNM));

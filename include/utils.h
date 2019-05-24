@@ -38,7 +38,7 @@ namespace pyNNGP {
             return _transform * result + _mu;
         }
     private:
-        const VectorXd& _mu;
+        const VectorXd _mu;
         const MatrixXd _transform;
     };
 }
